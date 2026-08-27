@@ -1,0 +1,397 @@
+class UnitConverter:
+    def __init__(self, root):
+        self.root = root
+        self.root.title("Unit Converter")
+        self.root.geometry("420x600")
+        self.root.resizable(False, False)
+
+        # -----------------------------
+        # Conversion units
+        # -----------------------------
+        self.units = {
+            "Length": [
+                "Centimetres",
+                "Metres",
+                "Kilometres",
+                "Inches",
+                "Feet"
+            ],
+            "Weight": [
+                "Grams",
+                "Kilograms",
+                "Pounds",
+                "Ounces"
+            ],
+            "Temperature": [
+                "Celsius",
+                "Fahrenheit",
+                "Kelvin"
+            ]
+        }
+
+        self.create_interface()
+
+    # -----------------------------
+    # Create user interface
+    # -----------------------------
+    def create_interface(self):
+
+        title = tk.Label(
+            self.root,
+            text="UNIT CONVERTER",
+            font=("Arial", 24, "bold")
+        )
+        title.pack(pady=25)
+
+        # Category
+        tk.Label(
+            self.root,
+            text="Category",
+            font=("Arial", 11, "bold")
+        ).pack(anchor="w", padx=40)
+
+        self.category_var = tk.StringVar(value="Length")
+
+        self.category_spinner = ttk.Combobox(
+            self.root,
+            textvariable=self.category_var,
+            values=list(self.units.keys()),
+            state="readonly",
+            font=("Arial", 11)
+        )
+        self.category_spinner.pack(
+            fill="x",
+            padx=40,
+            pady=(5, 20)
+        )
+
+        self.category_spinner.bind(
+            "<<ComboboxSelected>>",
+            self.category_changed
+        )
+
+        # Input value
+        tk.Label(
+            self.root,
+            text="Value",
+            font=("Arial", 11, "bold")
+        ).pack(anchor="w", padx=40)
+
+        self.value_entry = tk.Entry(
+            self.root,
+            font=("Arial", 12)
+        )
+        self.value_entry.pack(
+            fill="x",
+            padx=40,
+            pady=(5, 20),
+            ipady=8
+        )
+
+        # From unit
+        tk.Label(
+            self.root,
+            text="From",
+            font=("Arial", 11, "bold")
+        ).pack(anchor="w", padx=40)
+
+        self.from_var = tk.StringVar()
+
+        self.from_spinner = ttk.Combobox(
+            self.root,
+            textvariable=self.from_var,
+            state="readonly",
+            font=("Arial", 11)
+        )
+        self.from_spinner.pack(
+            fill="x",
+            padx=40,
+            pady=(5, 20)
+        )
+
+        # To unit
+        tk.Label(
+            self.root,
+            text="To",
+            font=("Arial", 11, "bold")
+        ).pack(anchor="w", padx=40)
+
+        self.to_var = tk.StringVar()
+
+        self.to_spinner = ttk.Combobox(
+            self.root,
+            textvariable=self.to_var,
+            state="readonly",
+            font=("Arial", 11)
+        )
+        self.to_spinner.pack(
+            fill="x",
+            padx=40,
+            pady=(5, 25)
+        )
+
+        # Convert button
+        convert_button = tk.Button(
+            self.root,
+            text="CONVERT",
+            command=self.perform_conversion,
+            font=("Arial", 12, "bold"),
+            padx=20,
+            pady=10
+        )
+        convert_button.pack(
+            fill="x",
+            padx=40
+        )
+
+        # Result
+        self.result_label = tk.Label(
+            self.root,
+            text="Result will appear here",
+            font=("Arial", 15, "bold"),
+            wraplength=340
+        )
+        self.result_label.pack(
+            pady=35,
+            padx=30
+        )
+
+        # Initialize units
+        self.update_unit_spinners()
+
+    # -----------------------------
+    # Category changed
+    # -----------------------------
+    def category_changed(self, event=None):
+
+        self.update_unit_spinners()
+
+        # Reset result
+        self.result_label.config(
+            text="Result will appear here"
+        )
+
+    # -----------------------------
+    # Update source/target units
+    # -----------------------------
+    def update_unit_spinners(self):
+
+        category = self.category_var.get()
+
+        available_units = self.units[category]
+
+        self.from_spinner["values"] = available_units
+        self.to_spinner["values"] = available_units
+
+        # Reset dropdowns
+        self.from_var.set(available_units[0])
+
+        if len(available_units) > 1:
+            self.to_var.set(available_units[1])
+        else:
+            self.to_var.set(available_units[0])
+
+    # -----------------------------
+    # Perform conversion
+    # -----------------------------
+    def perform_conversion(self):
+
+        input_value = self.value_entry.get().strip()
+
+        # Empty input validation
+        if not input_value:
+            messagebox.showwarning(
+                "Input Error",
+                "Please enter a value."
+            )
+            return
+
+        # Numeric validation
+        try:
+            value = float(input_value)
+
+        except ValueError:
+            messagebox.showwarning(
+                "Input Error",
+                "Please enter a valid number."
+            )
+            return
+
+        category = self.category_var.get()
+        from_unit = self.from_var.get()
+        to_unit = self.to_var.get()
+
+        # Perform conversion
+        if category == "Length":
+
+            result = self.convert_length(
+                value,
+                from_unit,
+                to_unit
+            )
+
+        elif category == "Weight":
+
+            result = self.convert_weight(
+                value,
+                from_unit,
+                to_unit
+            )
+
+        elif category == "Temperature":
+
+            result = self.convert_temperature(
+                value,
+                from_unit,
+                to_unit
+            )
+
+        else:
+            return
+
+        # Display result
+        self.result_label.config(
+            text=f"{self.format_number(value)} "
+                 f"{from_unit} = "
+                 f"{self.format_number(result)} "
+                 f"{to_unit}"
+        )
+
+    # -----------------------------
+    # Length conversion
+    # Base unit: metre
+    # -----------------------------
+    def convert_length(self, value, from_unit, to_unit):
+
+        # Convert source to metres
+        if from_unit == "Centimetres":
+            metres = value / 100
+
+        elif from_unit == "Metres":
+            metres = value
+
+        elif from_unit == "Kilometres":
+            metres = value * 1000
+
+        elif from_unit == "Inches":
+            metres = value * 0.0254
+
+        elif from_unit == "Feet":
+            metres = value * 0.3048
+
+        else:
+            metres = value
+
+        # Convert metres to target
+        if to_unit == "Centimetres":
+            return metres * 100
+
+        elif to_unit == "Metres":
+            return metres
+
+        elif to_unit == "Kilometres":
+            return metres / 1000
+
+        elif to_unit == "Inches":
+            return metres / 0.0254
+
+        elif to_unit == "Feet":
+            return metres / 0.3048
+
+        return metres
+
+    # -----------------------------
+    # Weight conversion
+    # Base unit: kilogram
+    # -----------------------------
+    def convert_weight(self, value, from_unit, to_unit):
+
+        # Convert source to kilograms
+        if from_unit == "Grams":
+            kilograms = value / 1000
+
+        elif from_unit == "Kilograms":
+            kilograms = value
+
+        elif from_unit == "Pounds":
+            kilograms = value * 0.45359237
+
+        elif from_unit == "Ounces":
+            kilograms = value * 0.028349523125
+
+        else:
+            kilograms = value
+
+        # Convert kilograms to target
+        if to_unit == "Grams":
+            return kilograms * 1000
+
+        elif to_unit == "Kilograms":
+            return kilograms
+
+        elif to_unit == "Pounds":
+            return kilograms / 0.45359237
+
+        elif to_unit == "Ounces":
+            return kilograms / 0.028349523125
+
+        return kilograms
+
+    # -----------------------------
+    # Temperature conversion
+    # Base unit: Celsius
+    # -----------------------------
+    def convert_temperature(
+            self,
+            value,
+            from_unit,
+            to_unit
+    ):
+
+        # Convert source to Celsius
+        if from_unit == "Celsius":
+            celsius = value
+
+        elif from_unit == "Fahrenheit":
+            celsius = (value - 32) * 5 / 9
+
+        elif from_unit == "Kelvin":
+            celsius = value - 273.15
+
+        else:
+            celsius = value
+
+        # Convert Celsius to target
+        if to_unit == "Celsius":
+            return celsius
+
+        elif to_unit == "Fahrenheit":
+            return (celsius * 9 / 5) + 32
+
+        elif to_unit == "Kelvin":
+            return celsius + 273.15
+
+        return celsius
+
+    # -----------------------------
+    # Format numbers
+    # -----------------------------
+    def format_number(self, number):
+
+        if abs(number - round(number)) < 0.0000001:
+            return str(int(round(number)))
+
+        return f"{number:.4f}".rstrip("0").rstrip(".")
+
+
+# -----------------------------
+# Start application
+# -----------------------------
+
+if __name__ == "__main__":
+
+    root = tk.Tk()
+
+    app = UnitConverter(root)
+
+    root.mainloop()
